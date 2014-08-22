@@ -32,7 +32,7 @@ to get started:
     error="could not promote, trying to skip rank?"
 
     python s3promote.py rev2.tar.gz qa
-    success="promoted rev2.tar.gz to operations"
+    success="promoted rev2.tar.gz to qa"
 
     python s3promote.py rev2.tar.gz staging
     success="promoted rev2.tar.gz to staging"

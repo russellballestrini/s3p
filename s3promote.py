@@ -10,7 +10,7 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 # valid ordered promotion ranks
-ranks = ['operations', 'staging', 'production']
+ranks = ['qa', 'staging', 'production']
 
 # required environment variables
 required_environ = [

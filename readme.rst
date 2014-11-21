@@ -18,6 +18,9 @@ to get started:
    **AWS_S3_BUCKET**
      Bucket used for storing releases
 
+   **AWS_S3_RANKS**
+     Coma separated string of ordered ranks used for promotion
+
 3. install dependencies, we suggest using a virtualenv:
 
    .. code-block:: bash
@@ -41,10 +44,3 @@ to get started:
     success="promoted rev2.tar.gz to production"
 
 Promoting to the first rank will cause an upload or update however promoting to subsequent ranks will copy from the previous.
-
-TODO: Ranks are hard coded, move to an environment variable?
-
-  .. code-block:: python
-
-    # valid ordered promotion ranks
-    ranks = ['qa', 'staging', 'production']

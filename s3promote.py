@@ -22,7 +22,7 @@ class S3Promote(object):
         return getattr(self.bucket, attr)
 
     def __init__(self, **kwargs):
-        """pass"""
+        """S3Promote is a special bucket that builds a release pipeline with code"""
         # if not passed, S3Connection automatically tries to use
         # env vars: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
         self.s3 = S3Connection(**kwargs)
@@ -42,7 +42,7 @@ class S3Promote(object):
         """upload a file to the first rank"""
         if version == None: version = str(uuid4())
         key_name = _key_path([self.ranks[0], _get_filename(filepath)])
-        k = Key(self, key_name)
+        k = Key(self.bucket, key_name)
         k.set_metadata('version', version)
         k.set_contents_from_filename(filepath)
 
@@ -64,7 +64,7 @@ class S3Promote(object):
         key = self.get_key(_key_path([rank, filename]))
         if key != None:
             version = key.metadata['version']
-            key.copy(self, _key_path(['archive', version, filename]))
+            key.copy(self.bucket, _key_path(['archive', version, filename]))
 
     def copy_key(self, src, dst):
         """copy file in S3 to a new key name"""

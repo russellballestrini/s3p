@@ -69,8 +69,7 @@ class S3Promote(object):
     @rank.setter
     def rank(self, rank):
         """Set rank or target rank of subject."""
-        if rank not in self.ranks:
-            raise Exception('invalid rank')
+        if rank not in self.ranks: raise Exception('invalid rank')
         self._rank = rank
 
     @property
@@ -83,43 +82,65 @@ class S3Promote(object):
         return self.bucket.get_key(self.key_path)
 
     @property
+    def rank_index(self):
+        """Get the index int of rank in ranks"""
+        return self.ranks.index(self.rank)
+
+    @property
+    def prev_rank_index(self):
+        """Get the index int of previous rank in ranks or None"""
+        if self.rank_index -1 == -1: return None
+        return self.rank_index - 1
+
+    @property
+    def prev_key_path(self):
+        """Get previous key_name path of subject or None"""
+        if self.prev_rank_index == None: return None
+        return _make_key_path([self.ranks[self.prev_rank_index], self.filename])
+
+    def get_prev_key(self):
+        """Get Key object of previous rank or None"""
+        if self.prev_key_path == None: return None
+        return self.bucket.get_key(self.prev_key_path)
+
+    @property
+    def prev_version(self):
+        """Get version metadata of subject in previous rank"""
+        key = self.get_prev_key()
+        if key == None: return None
+        return key.metadata['version']
+
+    @property
     def version(self):
         """Get version metadata of subject"""
         key = self.get_key()
-        if key == None:
-            return None
+        if key == None: return None
         return key.metadata['version']
 
     def upload(self, new_version=None):
         """Upload subject filepath to the first rank"""
         if new_version == None: new_version = str(uuid4())
-        k = Key(self.bucket, self.key_path)
-        k.set_metadata('version', new_version)
-        k.set_contents_from_filename(self.filepath)
+        key = Key(self.bucket, self.key_path)
+        key.set_metadata('version', new_version)
+        key.set_contents_from_filename(self.filepath)
+        self.archive(key)
 
     def promote(self, new_version=None):
-        """Archive then promote subject filepath to target rank"""
-        # archive key if it exists.
-        self.archive()
-
-        # get index of target rank
-        i = self.ranks.index(self.rank)
-
-        if i == 0:
+        """Promote subject filepath to target rank"""
+        if self.version == new_version or self.version == self.prev_version:
+            return '{} version {} already in {} rank'.format(
+                self.filename, self.version, self.rank)
+        if self.prev_rank_index == None:
             # upload a new version of the file.
             self.upload(new_version)
         else:
             # promote file from previous rank.
-            src = _make_key_path([self.ranks[i-1], self.filename])
-            dst = self.key_path
-            self.copy_key(src, dst)
+            self.copy_key(self.prev_key_path, self.key_path)
 
-    def archive(self):
-        """Move key if it exists to archive area with version"""
-        key = self.get_key()
-        if key != None:
-            archive_key_parts = ['archive', self.version, self.filename]
-            key.copy(self.bucket, _make_key_path(archive_key_parts) )
+    def archive(self, key):
+        """Archive key if it exists to archive area with version"""
+        archive_key_parts = ['archive', self.version, self.filename]
+        key.copy(self.bucket, _make_key_path(archive_key_parts) )
 
     def copy_key(self, src_key_path, dst_key_path):
         """Copy src key_path to dst key_path """
@@ -153,10 +174,13 @@ if __name__ == '__main__':
         exit()
 
     try:
-        promoter.promote(args.version)
+        result = promoter.promote(args.version)
     except:
         print('error="could not promote, trying to skip rank?"')
         exit(2)
 
-    print('success="promoted {} version {} to {} "'.format(
-        promoter.filename, promoter.version, promoter.rank))
+    if result == None:
+        print('success="promoted {} version {} to {} rank"'.format(
+            promoter.filename, promoter.version, promoter.rank))
+    else:
+        print('warning="{}"'.format(result))

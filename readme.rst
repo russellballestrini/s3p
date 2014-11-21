@@ -57,8 +57,26 @@ Pass an optional release number, version, commit hash or identifier string:
 
   .. code-block:: bash
 
-   python s3promote.py my.tar.gz qa --version=839de03f972e8182f3b614c88a179d51e9c15e63
+   python s3promote.py my.tar.gz qa --version=839de03f972e8182
 
-Instead of blindly clobbering files, s3promote will use the version to safely and automatically archive them.
+Instead of blindly clobbering files, s3promote will use the version
+to safely and automatically archive them.
 
 Build a release pipeline with code. Review S3Promote class for details.
+
+.. code-block:: bash
+
+   python s3promote.py --help
+
+   usage: Promote files through the release ranks. [-h] [--version VERSION]
+                                                   [--get-version]
+                                                   filepath rank
+
+   positional arguments:
+     filepath
+     rank
+
+   optional arguments:
+     -h, --help         show this help message and exit
+     --version VERSION  set version identifier, timestamp, md5, commit hash, etc
+     --get-version      get version identifier from rank

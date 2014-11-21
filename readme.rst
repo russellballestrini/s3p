@@ -64,19 +64,21 @@ to safely and automatically archive them.
 
 Build a release pipeline with code. Review S3Promote class for details.
 
+Usage
+=======
+
 .. code-block:: bash
 
-   python s3promote.py --help
-
-   usage: Promote files through the release ranks. [-h] [--version VERSION]
-                                                   [--get-version]
-                                                   filepath rank
-
-   positional arguments:
-     filepath
-     rank
-
-   optional arguments:
-     -h, --help         show this help message and exit
-     --version VERSION  set version identifier, timestamp, md5, commit hash, etc
-     --get-version      get version identifier from rank
+ usage: s3promote.py filepath rank
+ 
+ Promote files through the release ranks
+ 
+ positional arguments:
+   filepath
+   rank
+ 
+ optional arguments:
+   -h, --help         show this help message and exit
+   --version VERSION  set version identifier, timestamp, md5, commit hash, etc
+   --download PATH    download file from rank to PATH
+   --get-version      get version identifier from rank

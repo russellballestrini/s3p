@@ -8,10 +8,6 @@ from boto.s3.connection import S3Connection
 
 from boto.s3.key import Key
 
-def _get_filename(filepath):
-    """accept a filepath, return filename"""
-    return filepath.split('/')[-1]
-
 def _make_key_path(ordered_parts):
     return '/'.join(ordered_parts)
 
@@ -59,7 +55,7 @@ class S3Promote(object):
     def filepath(self, filepath):
         """Set filepath and filename of subject."""
         self._filepath = filepath
-        self.filename = _get_filename(self._filepath)
+        self.filename  = filepath.split('/')[-1]
 
     @property
     def rank(self):
@@ -80,6 +76,13 @@ class S3Promote(object):
     def get_key(self):
         """Get Key object of subject."""
         return self.bucket.get_key(self.key_path)
+
+    @property
+    def version(self):
+        """Get version metadata of subject"""
+        key = self.get_key()
+        if key == None: return None
+        return key.metadata['version']
 
     @property
     def rank_index(self):
@@ -110,12 +113,10 @@ class S3Promote(object):
         if key == None: return None
         return key.metadata['version']
 
-    @property
-    def version(self):
-        """Get version metadata of subject"""
-        key = self.get_key()
-        if key == None: return None
-        return key.metadata['version']
+    def archive(self, key):
+        """Archive key if it exists to archive area with version"""
+        archive_key_parts = ['archive', self.version, self.filename]
+        key.copy(self.bucket, _make_key_path(archive_key_parts) )
 
     def upload(self, new_version=None):
         """Upload subject filepath to the first rank"""
@@ -124,6 +125,10 @@ class S3Promote(object):
         key.set_metadata('version', new_version)
         key.set_contents_from_filename(self.filepath)
         self.archive(key)
+
+    def copy_key(self, src_key_path, dst_key_path):
+        """Copy src key_path to dst key_path """
+        return self.bucket.copy_key(dst_key_path,self.bucket.name,src_key_path)
 
     def promote(self, new_version=None):
         """Promote subject filepath to target rank"""
@@ -137,24 +142,23 @@ class S3Promote(object):
             # promote file from previous rank.
             self.copy_key(self.prev_key_path, self.key_path)
 
-    def archive(self, key):
-        """Archive key if it exists to archive area with version"""
-        archive_key_parts = ['archive', self.version, self.filename]
-        key.copy(self.bucket, _make_key_path(archive_key_parts) )
-
-    def copy_key(self, src_key_path, dst_key_path):
-        """Copy src key_path to dst key_path """
-        return self.bucket.copy_key(dst_key_path,self.bucket.name,src_key_path)
+    def download(self, filepath):
+        """download key contents to filepath"""
+        self.get_key().get_contents_to_filename(filepath)
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser("Promote files through the release ranks.")
+    parser = ArgumentParser( usage='%(prog)s filepath rank',
+        description="Promote files through the release ranks")
     parser.add_argument('filepath')
     parser.add_argument('rank')
     parser.add_argument('--version', default=None,
         help='set version identifier, timestamp, md5, commit hash, etc')
+    parser.add_argument('--download', metavar='PATH', default=None,
+        help='download file from rank to PATH')
     parser.add_argument('--get-version', action='store_true', default=False,
         help='get version identifier from rank')
+    args = parser.parse_args()
     args = parser.parse_args()
 
     promoter = S3Promote()
@@ -171,6 +175,10 @@ if __name__ == '__main__':
 
     if args.get_version == True:
         print('version="{}"'.format(promoter.version))
+        exit()
+
+    if args.download != None:
+        promoter.download(args.download)
         exit()
 
     try:

@@ -11,14 +11,19 @@ from boto.s3.key import Key
 def _make_key_path(ordered_parts):
     return '/'.join(ordered_parts)
 
-class S3Promote(object):
+class S3Pipeline(object):
+    """
+    Represents a release pipeline (object) in S3.
 
-    #def __getattr__(self, attr):
-    #    """Composition Magic: if a get attribute fails, look here next."""
-    #    return getattr(self.bucket, attr)
+    This class acts like boto.s3.bucket.Bucket through composition.
+    """
+
+    def __getattr__(self, attr):
+        """Composition Magic: if a get attribute fails, look here next."""
+        return getattr(self.bucket, attr)
 
     def __init__(self, **kwargs):
-        """S3Promote bucket that builds a release pipeline with code"""
+        """Build the pipeline object with keyword args or env vars."""
         # if not passed, S3Connection automatically tries to use
         # env vars: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
         self.s3 = S3Connection(**kwargs)
@@ -38,113 +43,160 @@ class S3Promote(object):
         # mutate into a list, split on coma and strip whitespace.
         self.ranks = [rank.strip() for rank in raw_ranks.split(',')]
 
-        if 'filepath' in kwargs:
-            # invoke filepath.setter
-            self.filepath = kwargs['filepath']
+    def get_release(self, filepath, rank):
+        """Return an S3Release object for filepath and rank"""
+        return S3Release(self, filepath, rank)
 
-        if 'rank' in kwargs:
-            # invoke rank.setter
-            self.rank = kwargs['rank']
+    def get_releases(self, filepath):
+        """Return a list of releases of a filepath in the pipeline."""
+        return [self.get_release(filepath, rank) for rank in self.ranks]
+
+    def file_info(self, filepath):
+        """TODO: is this silly? Return pipeline data about file in all ranks"""
+        data = {}
+        for release in self.get_releases(filepath):
+            rank = release.rank
+            data[rank] = release.metadata
+            data[rank]['name'] = release.name
+            data[rank]['filename'] = release.filename
+            data[rank]['size'] = release.size
+            data[rank]['etag'] = release.etag.strip('"')
+            data[rank]['md5'] = release.md5
+            data[rank]['last_modified'] = release.last_modified
+            data[rank]['version'] = release.version
+            data[rank]['content_type'] = release.content_type
+            data[rank]['content_encoding'] = release.content_encoding
+        return data
+
+    def file_versions(self, filepath):
+        versions = []
+        for release in self.get_releases(filepath):
+            versions.append((release.name,release.version))
+        return versions
+
+    def copy_key(self, src_key_path, dst_key_path):
+        """Copy src_key_path to dst_key_path """
+        return self.bucket.copy_key(dst_key_path,self.bucket.name,src_key_path)
+
+
+class S3Release(object):
+    """
+    Represents a release (object) in an S3Pipeline.
+
+    This class acts like boto.s3.key.Key through composition.
+    """
+
+    def __getattr__(self, attr):
+        """Composition Magic: if a get attribute fails, look here next."""
+        return getattr(self.key, attr)
+
+    def __init__(self, pipeline, filepath, rank):
+        self.pipeline = pipeline
+        self.filepath = filepath
+        self.rank = rank
+
+    @property
+    def key(self):
+        """Always fresh view of key object."""
+        return self.pipeline.get_key(self.key_path)
+
+    @property
+    def prev_key(self):
+        """Always fresh view of prev_key object."""
+        return self.pipeline.get_key(self.prev_key_path)
 
     @property
     def filepath(self):
-        """Get filepath of subject."""
+        """Get filepath of this release."""
         return self._filepath
 
     @filepath.setter
     def filepath(self, filepath):
-        """Set filepath and filename of subject."""
+        """Set filepath and filename of this release."""
         self._filepath = filepath
         self.filename  = filepath.split('/')[-1]
 
     @property
     def rank(self):
-        """Get rank or target rank of subject."""
+        """Get rank or target rank of this release."""
         return self._rank
 
     @rank.setter
     def rank(self, rank):
-        """Set rank or target rank of subject."""
-        if rank not in self.ranks: raise Exception('invalid rank')
+        """Set rank or target rank of this release."""
+        if rank not in self.pipeline.ranks: raise Exception('invalid rank')
         self._rank = rank
 
     @property
     def key_path(self):
-        """Get key_name path of subject."""
+        """Get key_path of this release."""
         return _make_key_path([self.rank, self.filename])
-
-    def get_key(self):
-        """Get Key object of subject."""
-        return self.bucket.get_key(self.key_path)
 
     @property
     def version(self):
-        """Get version metadata of subject"""
-        key = self.get_key()
-        if key == None: return None
-        return key.metadata['version']
+        """Get version metadata of this release"""
+        if self.key == None: return None
+        return self.key.metadata['version']
 
     @property
     def rank_index(self):
-        """Get the index int of rank in ranks"""
-        return self.ranks.index(self.rank)
+        """Get the index integer of this release's rank"""
+        return self.pipeline.ranks.index(self.rank)
 
     @property
     def prev_rank_index(self):
-        """Get the index int of previous rank in ranks or None"""
-        if self.rank_index -1 == -1: return None
+        """Get the index integer of the previous release's rank or None"""
+        if self.rank_index <= 0: return None
         return self.rank_index - 1
 
     @property
     def prev_key_path(self):
-        """Get previous key_name path of subject or None"""
+        """Get previous key_path of this release or None"""
         if self.prev_rank_index == None: return None
-        return _make_key_path([self.ranks[self.prev_rank_index], self.filename])
-
-    def get_prev_key(self):
-        """Get Key object of previous rank or None"""
-        if self.prev_key_path == None: return None
-        return self.bucket.get_key(self.prev_key_path)
+        return _make_key_path([self.pipeline.ranks[self.prev_rank_index], self.filename])
 
     @property
     def prev_version(self):
-        """Get version metadata of subject in previous rank"""
-        key = self.get_prev_key()
-        if key == None: return None
-        return key.metadata['version']
+        """Get version metadata of the previous rank's release"""
+        if self.prev_key == None: return None
+        return self.prev_key.metadata['version']
 
-    def archive(self, key):
-        """Archive key if it exists to archive area with version"""
+    def archive(self):
+        """Archive this release to the archive area of the pipeline."""
         archive_key_parts = ['archive', self.version, self.filename]
-        key.copy(self.bucket, _make_key_path(archive_key_parts) )
+        self.pipeline.copy_key(self.key_path, _make_key_path(archive_key_parts))
 
     def upload(self, new_version=None):
-        """Upload subject filepath to the first rank"""
+        """Upload this release's filepath to the first rank and archive."""
+        key = self.key
+        if key == None: key = Key(self.pipeline, self.key_path)
         if new_version == None: new_version = str(uuid4())
-        key = Key(self.bucket, self.key_path)
         key.set_metadata('version', new_version)
         key.set_contents_from_filename(self.filepath)
-        self.archive(key)
-
-    def copy_key(self, src_key_path, dst_key_path):
-        """Copy src key_path to dst key_path """
-        return self.bucket.copy_key(dst_key_path,self.bucket.name,src_key_path)
+        self.archive()
 
     def promote(self, new_version=None):
-        """Promote subject filepath to target rank"""
-        if self.version == new_version or self.version == self.prev_version:
-            return '{} version {} already in {} rank'.format(
-                self.filename, self.version, self.rank)
+        """
+        Promote this release's filepath to target rank.
+
+        Upload only if first rank, otherwise copy from previous.
+
+        If the release version matches new_version do nothing.
+        """
+        if self.version != None:
+            if self.version == new_version or self.version == self.prev_version:
+                return '{} version {} already in {} rank'.format(
+                    self.filename, self.version, self.rank)
         if self.prev_rank_index == None:
             # upload a new version of the file.
             self.upload(new_version)
         else:
             # promote file from previous rank.
-            self.copy_key(self.prev_key_path, self.key_path)
+            self.pipeline.copy_key(self.prev_key_path, self.key_path)
 
     def download(self, filepath):
-        """download key contents to filepath"""
-        self.get_key().get_contents_to_filename(filepath)
+        """Download this release's contents to filepath."""
+        self.key.get_contents_to_filename(filepath)
 
 
 if __name__ == '__main__':
@@ -154,41 +206,54 @@ if __name__ == '__main__':
     parser.add_argument('rank')
     parser.add_argument('--version', default=None,
         help='set version identifier, timestamp, md5, commit hash, etc')
-    parser.add_argument('--download', metavar='PATH', default=None,
-        help='download file from rank to PATH')
+    parser.add_argument('--download', metavar='PATH', dest='download_path',
+        default=None, help='download file from rank to PATH')
     parser.add_argument('--get-version', action='store_true', default=False,
         help='get version identifier from rank')
+    parser.add_argument('--get-versions', action='store_true', default=False,
+        help='get version identifier for all rank')
+    parser.add_argument('--info', action='store_true', default=False,
+        help='get info about release in pipeline')
     args = parser.parse_args()
-    args = parser.parse_args()
 
-    promoter = S3Promote()
+    # pipeline is a Bucket like object.
+    pipeline = S3Pipeline()
 
-    # set subject's filepath (and filename)
-    promoter.filepath = args.filepath
+    if args.info == True:
+        print(pipeline.file_info(args.filepath))
+        exit()
 
+    if args.get_versions == True:
+        versions = pipeline.file_versions(args.filepath)
+        for version in versions:
+            print('{}="{}"'.format(*version))
+        exit()
+
+    # release is a Key like object.
+    #release = pipeline.get_release(args.filepath, args.rank)
     try:
-        # set subject rank or target rank
-        promoter.rank = args.rank
+        release = pipeline.prepare_release(args.filepath, args.rank)
     except:
         print('error="invalid rank"')
         exit(2)
 
     if args.get_version == True:
-        print('version="{}"'.format(promoter.version))
+        print('{}="{}"'.format(release.rank,release.version))
         exit()
 
-    if args.download != None:
-        promoter.download(args.download)
+    if args.download_path != None:
+        release.download(args.download_path)
         exit()
 
+    #result = release.promote(args.version)
     try:
-        result = promoter.promote(args.version)
+        result = release.promote(args.version)
     except:
         print('error="could not promote, trying to skip rank?"')
         exit(2)
 
     if result == None:
         print('success="promoted {} version {} to {} rank"'.format(
-            promoter.filename, promoter.version, promoter.rank))
+            release.filename, release.version, release.rank))
     else:
         print('warning="{}"'.format(result))

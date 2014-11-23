@@ -23,16 +23,12 @@ class S3Release(object):
         self.pipeline = pipeline
         self.filepath = filepath
         self.rank = rank
+        self.refresh_keys()
 
-    @property
-    def key(self):
-        """Always fresh view of key object."""
-        return self.pipeline.get_key(self.key_path)
-
-    @property
-    def prev_key(self):
-        """Always fresh view of prev_key object."""
-        return self.pipeline.get_key(self.prev_key_path)
+    def refresh_keys(self):
+        """refresh self.key and self.prev_key objects with data from S3"""
+        self.key = self.pipeline.get_key(self.key_path)
+        self.prev_key = self.pipeline.get_key(self.prev_key_path)
 
     @property
     def filepath(self):
@@ -115,6 +111,7 @@ class S3Release(object):
         key.set_metadata('version', new_version)
         key.set_metadata('uploaded_timestamp', uploaded)
         key.set_contents_from_filename(self.filepath)
+        self.refresh_keys()
         self.archive()
 
     def promote(self, new_version=None):
@@ -135,6 +132,7 @@ class S3Release(object):
         else:
             # promote file from previous rank.
             self.pipeline.copy_key(self.prev_key_path, self.key_path)
+            self.refresh_keys()
 
     def download(self, filepath):
         """Download this release's contents to filepath."""

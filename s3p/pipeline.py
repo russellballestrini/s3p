@@ -62,7 +62,10 @@ class S3Pipeline(object):
     def file_versions(self, filepath):
         versions = []
         for release in self.get_releases(filepath):
-            versions.append((release.name,release.version))
+            if release.key == None:
+                versions.append((release.rank,None))
+            else:
+                versions.append((release.rank,release.version))
         return versions
 
     def copy_key(self, src_key_path, dst_key_path):

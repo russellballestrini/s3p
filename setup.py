@@ -6,14 +6,14 @@ with open('requirements.txt', 'r') as f:
 
 setup( 
     name = 's3p',
-    version = '0.1.0',
+    version = '0.1.1',
     description = 's3p: Create process by promoting releases in an AWS S3 pipeline',
     keywords = 's3p process pipeline promote release',
     long_description = open('readme.rst').read(),
 
     author = 'Russell Ballestrini',
     author_email = 'russell@ballestrini.net',
-    url = 'https://github.com/russellballestrini/s3promote',
+    url = 'https://github.com/russellballestrini/s3p',
 
     platforms = ['All'],
     license = 'Public Domain',

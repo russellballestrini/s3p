@@ -53,8 +53,8 @@ class S3Pipeline(object):
             data[rank]['size'] = release.size
             data[rank]['etag'] = release.etag.strip('"')
             data[rank]['md5'] = release.md5
+            data[rank]['uploaded_date'] = release.uploaded_date
             data[rank]['last_modified'] = release.last_modified
-            data[rank]['version'] = release.version
             data[rank]['content_type'] = release.content_type
             data[rank]['content_encoding'] = release.content_encoding
         return data

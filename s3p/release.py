@@ -1,11 +1,12 @@
-from time import time
 from boto.s3.key import Key
+from datetime import datetime as dt
+from time import time
+
+precision_epoch = lambda: int(time()*1000)
+normal_epoch = lambda x : int(x)/1000
 
 def _make_key_path(ordered_parts):
     return '/'.join(ordered_parts)
-
-def precision_epoch(): return int(time()*100)
-def normal_epoch(precision_epoch): return precision_epoch/100
 
 class S3Release(object):
     """
@@ -61,6 +62,17 @@ class S3Release(object):
         return _make_key_path([self.rank, self.filename])
 
     @property
+    def uploaded_timestamp(self):
+        """Get timestamp when this release was uploaded"""
+        if self.key == None: return None
+        return int(self.key.metadata['uploaded_timestamp'])
+
+    @property
+    def uploaded_date(self):
+        """Get datetime object when this release was uploaded"""
+        return dt.fromtimestamp(normal_epoch(self.uploaded_timestamp))
+
+    @property
     def version(self):
         """Get version metadata of this release"""
         if self.key == None: return None
@@ -96,10 +108,12 @@ class S3Release(object):
 
     def upload(self, new_version=None):
         """Upload this release's filepath to the first rank and archive."""
+        uploaded = precision_epoch()
         key = self.key
         if key == None: key = Key(self.pipeline, self.key_path)
-        if new_version == None: new_version = precision_epoch()
+        if new_version == None: new_version = uploaded
         key.set_metadata('version', new_version)
+        key.set_metadata('uploaded_timestamp', uploaded)
         key.set_contents_from_filename(self.filepath)
         self.archive()
 

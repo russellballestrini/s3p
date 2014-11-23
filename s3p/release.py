@@ -1,8 +1,11 @@
+from time import time
 from boto.s3.key import Key
-from uuid import uuid4
 
 def _make_key_path(ordered_parts):
     return '/'.join(ordered_parts)
+
+def precision_epoch(): return int(time()*100)
+def normal_epoch(precision_epoch): return precision_epoch/100
 
 class S3Release(object):
     """
@@ -95,7 +98,7 @@ class S3Release(object):
         """Upload this release's filepath to the first rank and archive."""
         key = self.key
         if key == None: key = Key(self.pipeline, self.key_path)
-        if new_version == None: new_version = str(uuid4())
+        if new_version == None: new_version = precision_epoch()
         key.set_metadata('version', new_version)
         key.set_contents_from_filename(self.filepath)
         self.archive()

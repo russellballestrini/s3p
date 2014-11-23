@@ -40,64 +40,99 @@ To get started:
 
 2. test:
 
-   .. code-block:: bash
+ .. code-block:: bash
 
-    s3p rev2.tar.gz staging
-    error="could not promote, trying to skip rank?"
+  s3p promote my.tar.gz staging
+  error="could not promote, trying to skip rank?"
 
-    s3p my.tar.gz qa
-    success="promoted my.tar.gz to qa"
+  s3p promote my.tar.gz qa
+  success="promoted my.tar.gz version 141676372407 to qa rank"
 
-    s3p my.tar.gz staging
-    success="promoted my.tar.gz to staging"
+  s3p promote my.tar.gz staging
+  success="promoted my.tar.gz version 141676372407 to staging rank"
 
-    s3p my.tar.gz production
-    success="promoted my.tar.gz to production"
+  s3p promote my.tar.gz production
+  success="promoted my.tar.gz version 141676372407 to production rank"
 
-Promoting to the first rank will cause an upload or update.
-Promoting to subsequent ranks will copy from the previous rank.
+* Promoting to the first rank will cause an upload or update.
+* Promoting to subsequent ranks will copy from the previous rank.
 
 Pass an optional release number, version, commit hash or identifier string:
 
-  .. code-block:: bash
-
-   s3p my.tar.gz qa --version=839de03f972e8182
-
-Instead of blindly clobbering files, s3promote will use the version
-to safely and automatically archive them.
-
-Build a release pipeline with code. Review S3Promote class for details.
-
-Usage
-=======
-
 .. code-block:: bash
 
- usage: s3p filepath rank
- 
- Promote files through the release ranks
- 
- positional arguments:
-   filepath
-   rank
- 
- optional arguments:
-   -h, --help         show this help message and exit
-   --version VERSION  set version identifier, timestamp, md5, commit hash, etc
-   --download PATH    download file from rank to PATH
-   --get-version      get version identifier from rank
+ s3p promote my.tar.gz qa 0.1.1
+ success="promoted my.tar.gz version 0.1.1 to qa rank"
+
+ s3p promote my.tar.gz staging
+ success="promoted my.tar.gz version 0.1.1 to staging rank"
+
+Instead of blindly clobbering files, *s3p promote* always creates a copy
+of the file under the archive area in the pipeline using the version id.
+
+
+Subcommands
+===========
+
+There are a number of subcommands that interface with the pipeline.
+
+version
+-------
+
+**s3p version --help**
+
+.. code-block:: text
+
+  usage: s3p version filepath [rank]
+
+  positional arguments:
+    filepath    filename or filepath
+    rank        position in pipeline
+
+promote
+-------
+
+**s3p promote --help**
+
+.. code-block:: text
+
+  usage: s3p promote filepath rank [version]
+
+  Promote releases through pipeline ranks.
+
+  positional arguments:
+    filepath    filename or filepath
+    rank        position in pipeline
+    version     version identifier, timestamp, md5, commit hash, etc
+
+download
+--------
+
+**s3p download --help**
+
+.. code-block:: text
+
+  usage: s3p download filepath rank [download_path]
+
+  Download release from rank to local filesystem.
+
+  positional arguments:
+    filepath       filename or filepath
+    rank           position in pipeline
+    download_path  location to download file to
+
 
 Classes
 ==========
 
-Provides the following classes for you to extend (although not nessasary):
+Build a release pipeline with code. Review S3Promote and S3Release classes:
 
 **S3Pipeline**:
-  Represents a releases pipeline (object) in S3.
+  Represents a release pipeline (object) in S3.
   Acts like boto.s3.bucket.Bucket through composition.
 
   For more details:
-  
+
   .. code-block:: python
 
     from s3p import S3Pipeline

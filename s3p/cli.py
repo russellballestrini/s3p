@@ -5,36 +5,41 @@ from argparse import ArgumentParser
 from s3p import S3Pipeline
 
 def build_base_subparser(parser, optional_rank=False):
-    parser.add_argument('filepath')
+    parser.add_argument('filepath', help='filename or filepath')
+    rank_help='position in pipeline'
     if optional_rank:
-        parser.add_argument('rank', nargs='?', default=None)
+        parser.add_argument('rank', nargs='?', default=None, help=rank_help)
     else:
-        parser.add_argument('rank')
+        parser.add_argument('rank', help=rank_help)
     return parser
 
 def build_promote_subparser(parser):
     parser = build_base_subparser(parser)
     parser.add_argument('version', nargs='?', default=None,
-        help='set version identifier, timestamp, md5, commit hash, etc')
+        help='version identifier, timestamp, md5, commit hash, etc')
     parser.set_defaults(func=promote)
 
-def build_status_subparser(parser):
+def build_version_subparser(parser):
     parser = build_base_subparser(parser, optional_rank=True)
-    parser.set_defaults(func=status)
+    parser.set_defaults(func=version)
 
 def build_download_subparser(parser):
     parser = build_base_subparser(parser)
     parser.add_argument('download_path', nargs='?', default=None,
-        help='download file from rank to download_path')
+        help='location to download file to')
     parser.set_defaults(func=download)
 
 def build_parser():
     parser = ArgumentParser(
         description="Build process and piplelines on AWS S3 for release promotion")
-    subparsers = parser.add_subparsers()
-    build_promote_subparser(subparsers.add_parser('promote'))
-    build_status_subparser(subparsers.add_parser('status'))
-    build_download_subparser(subparsers.add_parser('download'))
+    subparsers = parser.add_subparsers(title='subcommands',
+        description='valid subcommands', help='--help for additional subcommand help')
+    build_promote_subparser(subparsers.add_parser('promote',
+        description='Promote releases through pipeline ranks.'))
+    build_version_subparser(subparsers.add_parser('version',
+        description='Get release version info from one or all pipeline ranks.'))
+    build_download_subparser(subparsers.add_parser('download',
+        description='Download release from rank to local filesystem.'))
     return parser
 
 def promote(args):
@@ -51,7 +56,7 @@ def promote(args):
     else:
         return 'warning="{}"'.format(result)
 
-def status(args):
+def version(args):
     pipeline = S3Pipeline()
     if args.rank == None:
         output = []

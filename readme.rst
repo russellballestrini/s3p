@@ -10,7 +10,11 @@ Install
 
   pip install s3p
 
-or clone this repo.
+or clone this repo and run,
+
+.. code-block:: bash
+
+  pip install --upgrade .
 
 Getting Started
 ===============

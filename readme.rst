@@ -1,8 +1,35 @@
-s3promote
-#########
+S3 Pipeline
+###########
 
-A Python application which uses boto to promote a file through
-the ranks (release directories) on AWS S3.
+Python libraries and scripts used to build and maintain release pipelines on AWS S3.
+
+Classes
+==========
+
+Provides the following classes for you to extend (although not nessasary):
+
+**S3Pipeline**:
+  Represents a releases pipeline (object) in S3.
+  Acts like boto.s3.bucket.Bucket through composition.
+
+  For more details:
+  
+  .. code-block:: python
+
+    from s3pipeline.pipeline import S3Pipeline
+    help(S3Pipeline)
+
+**S3Release**:
+  Represents a release (object) in an S3Pipeline.
+  Acts like boto.s3.key.Key through composition.
+
+  For more details:
+  
+  .. code-block:: python
+
+    from s3pipeline.release import S3Release
+    help(S3Release)
+
 
 To get started:
 

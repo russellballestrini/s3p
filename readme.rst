@@ -1,40 +1,23 @@
-S3 Pipeline
-###########
+s3p
+###
 
-Python libraries and scripts used to build and maintain release pipelines on AWS S3.
+Use AWS S3 as a release pipeline.  Use code to inforce process and promote releases.
 
-Classes
-==========
+Install
+=======
 
-Provides the following classes for you to extend (although not nessasary):
+.. code-block:: bash
 
-**S3Pipeline**:
-  Represents a releases pipeline (object) in S3.
-  Acts like boto.s3.bucket.Bucket through composition.
+  pip install s3p
 
-  For more details:
-  
-  .. code-block:: python
+or clone this repo.
 
-    from s3pipeline.pipeline import S3Pipeline
-    help(S3Pipeline)
-
-**S3Release**:
-  Represents a release (object) in an S3Pipeline.
-  Acts like boto.s3.key.Key through composition.
-
-  For more details:
-  
-  .. code-block:: python
-
-    from s3pipeline.release import S3Release
-    help(S3Release)
-
+Getting Started
+===============
 
 To get started:
 
-1. clone this repo
-2. set the environment vars:
+1. set the environment vars:
 
    **AWS_ACCESS_KEY_ID**
      Access key
@@ -55,26 +38,20 @@ To get started:
        AWS_S3_RANKS="qa, staging, production"
 
 
-3. install dependencies, we suggest using a virtualenv:
+2. test:
 
    .. code-block:: bash
 
-      pip install -r requirements
-
-4. test:
-
-   .. code-block:: bash
-
-    python s3promote.py rev2.tar.gz staging
+    s3p rev2.tar.gz staging
     error="could not promote, trying to skip rank?"
 
-    python s3promote.py my.tar.gz qa
+    s3p my.tar.gz qa
     success="promoted my.tar.gz to qa"
 
-    python s3promote.py my.tar.gz staging
+    s3p my.tar.gz staging
     success="promoted my.tar.gz to staging"
 
-    python s3promote.py my.tar.gz production
+    s3p my.tar.gz production
     success="promoted my.tar.gz to production"
 
 Promoting to the first rank will cause an upload or update.
@@ -84,7 +61,7 @@ Pass an optional release number, version, commit hash or identifier string:
 
   .. code-block:: bash
 
-   python s3promote.py my.tar.gz qa --version=839de03f972e8182
+   s3p my.tar.gz qa --version=839de03f972e8182
 
 Instead of blindly clobbering files, s3promote will use the version
 to safely and automatically archive them.
@@ -96,7 +73,7 @@ Usage
 
 .. code-block:: bash
 
- usage: s3promote.py filepath rank
+ usage: s3p filepath rank
  
  Promote files through the release ranks
  
@@ -109,3 +86,31 @@ Usage
    --version VERSION  set version identifier, timestamp, md5, commit hash, etc
    --download PATH    download file from rank to PATH
    --get-version      get version identifier from rank
+
+Classes
+==========
+
+Provides the following classes for you to extend (although not nessasary):
+
+**S3Pipeline**:
+  Represents a releases pipeline (object) in S3.
+  Acts like boto.s3.bucket.Bucket through composition.
+
+  For more details:
+  
+  .. code-block:: python
+
+    from s3p import S3Pipeline
+    help(S3Pipeline)
+
+**S3Release**:
+  Represents a release (object) in an S3Pipeline.
+  Acts like boto.s3.key.Key through composition.
+
+  For more details:
+  
+  .. code-block:: python
+
+    from s3p import S3Release
+    help(S3Release)
+

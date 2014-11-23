@@ -4,59 +4,75 @@ from argparse import ArgumentParser
 
 from s3p import S3Pipeline
 
-def main():
-    parser = ArgumentParser( usage='%(prog)s filepath rank',
-        description="Promote files through the release ranks")
+def build_base_subparser(parser, optional_rank=False):
     parser.add_argument('filepath')
-    parser.add_argument('rank')
-    parser.add_argument('--version', default=None,
+    if optional_rank:
+        parser.add_argument('rank', nargs='?', default=None)
+    else:
+        parser.add_argument('rank')
+    return parser
+
+def build_promote_subparser(parser):
+    parser = build_base_subparser(parser)
+    parser.add_argument('version', nargs='?', default=None,
         help='set version identifier, timestamp, md5, commit hash, etc')
-    parser.add_argument('--download', metavar='PATH', dest='download_path',
-        default=None, help='download file from rank to PATH')
-    parser.add_argument('--get-version', action='store_true', default=False,
-        help='get version identifier from rank')
-    parser.add_argument('--get-versions', action='store_true', default=False,
-        help='get version identifier for all rank')
-    parser.add_argument('--info', action='store_true', default=False,
-        help='get info about release in pipeline')
-    args = parser.parse_args()
+    parser.set_defaults(func=promote)
 
+def build_status_subparser(parser):
+    parser = build_base_subparser(parser, optional_rank=True)
+    parser.set_defaults(func=status)
+
+def build_download_subparser(parser):
+    parser = build_base_subparser(parser)
+    parser.add_argument('download_path', nargs='?', default=None,
+        help='download file from rank to download_path')
+    parser.set_defaults(func=download)
+
+def build_parser():
+    parser = ArgumentParser(
+        description="Build process and piplelines on AWS S3 for release promotion")
+    subparsers = parser.add_subparsers()
+    build_promote_subparser(subparsers.add_parser('promote'))
+    build_status_subparser(subparsers.add_parser('status'))
+    build_download_subparser(subparsers.add_parser('download'))
+    return parser
+
+def promote(args):
     pipeline = S3Pipeline()
-
-    if args.info == True:
-        print(pipeline.file_info(args.filepath))
-        exit()
-
-    if args.get_versions == True:
-        versions = pipeline.file_versions(args.filepath)
-        for version in versions:
-            print('{}="{}"'.format(*version))
-        exit()
-
-    #release = pipeline.get_release(args.filepath, args.rank)
-    try:
-        release = pipeline.get_release(args.filepath, args.rank)
-    except:
-        print('error="invalid rank"')
-        exit(2)
-
-    if args.get_version == True:
-        print('{}="{}"'.format(release.rank,release.version))
-        exit()
-
-    if args.download_path != None:
-        release.download(args.download_path)
-        exit()
-
-    result = release.promote(args.version)
+    release = pipeline.get_release(args.filepath, args.rank)
     try:
         result = release.promote(args.version)
     except:
-        print('error="could not promote, trying to skip rank?"')
-        exit(2)
+        return 'error="could not promote, trying to skip rank?"'
 
     if result == None:
-        print('success="promoted {} version {} to {} rank"'.format(
-            release.filename, release.version, release.rank))
+        return 'success="promoted {} version {} to {} rank"'.format(
+            release.filename, release.version, release.rank)
     else:
-        print('warning="{}"'.format(result))
+        return 'warning="{}"'.format(result)
+
+def status(args):
+    pipeline = S3Pipeline()
+    if args.rank == None:
+        output = []
+        versions = pipeline.file_versions(args.filepath)
+        for version in versions:
+            output.append('{}="{}"'.format(*version))
+        return '\n'.join(output)
+    else:
+        release = pipeline.get_release(args.filepath, args.rank)
+        return '{}="{}"'.format(release.rank,release.version)
+
+def download(args):
+    pipeline = S3Pipeline()
+    release = pipeline.get_release(args.filepath, args.rank)
+    if args.download_path == None:
+        args.download_path = release.rank+'-'+release.filename
+    release.download(args.download_path)
+    return 'success="downloaded {} version {} from rank {} to {}"'.format(
+        release.filename,release.version,release.rank,args.download_path)
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    print(args.func(args))

@@ -1,7 +1,7 @@
 s3p
 ###
 
-Use AWS S3 as a release pipeline.  Use code to inforce process and promote releases.
+Use AWS S3 as a release pipeline.  Use code to enforce process and promote releases.
 
 Install
 =======

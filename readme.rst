@@ -13,6 +13,7 @@ Install
 or clone this repo and run,
 
 .. code-block:: bash
+
   git clone https://github.com/russellballestrini/s3p.git
   cd s3p
   pip install --upgrade .

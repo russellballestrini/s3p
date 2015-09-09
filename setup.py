@@ -11,7 +11,7 @@ with open('requirements.txt', 'r') as f:
 
 setup( 
     name = 's3p',
-    version = '0.1.1',
+    version = '0.1.2',
     description = 's3p: Create process by promoting releases in an AWS S3 pipeline',
     keywords = 's3p process pipeline promote release',
     long_description = open('readme.rst').read(),

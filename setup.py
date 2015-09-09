@@ -1,8 +1,13 @@
-# installation: pip install s3p
-from setuptools import setup
 
+from setuptools import (
+  setup,
+  find_packages,
+)
+
+# read requirements.txt for requres, filter comments and newlines.
+sanitize = lambda x : not x.startswith('#') and not x.startswith('\n')
 with open('requirements.txt', 'r') as f:
-    requires = [line.strip() for line in f]
+    requires = filter(sanitize, f.readlines())
 
 setup( 
     name = 's3p',
@@ -18,7 +23,7 @@ setup(
     platforms = ['All'],
     license = 'Public Domain',
 
-    packages = ['s3p'],
+    packages = find_packages(),
 
     install_requires = requires,
     entry_points = {

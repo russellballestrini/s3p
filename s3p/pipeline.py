@@ -20,7 +20,7 @@ class S3Pipeline(object):
         self.s3 = S3Connection(**kwargs)
 
         bucket_name = kwargs.get('bucket', environ.get('AWS_S3_BUCKET', None))
-        if bucket_name == None:
+        if bucket_name is None:
             raise Exception("Pass or set a bucket name.")
         try:
             self.bucket = self.s3.get_bucket(bucket_name)
@@ -29,7 +29,7 @@ class S3Pipeline(object):
             self.bucket = self.s3.create_bucket(bucket_name)
 
         raw_ranks = kwargs.get('ranks', environ.get('AWS_S3_RANKS', None))
-        if raw_ranks == None:
+        if raw_ranks is None:
             raise Exception("Pass or set some ranks.")
         # mutate into a list, split on coma and strip whitespace.
         self.ranks = [rank.strip() for rank in raw_ranks.split(',')]
@@ -62,10 +62,10 @@ class S3Pipeline(object):
     def file_versions(self, filepath):
         versions = []
         for release in self.get_releases(filepath):
-            if release.key == None:
-                versions.append((release.rank,None))
+            if release.key is None:
+                versions.append((release.rank, None))
             else:
-                versions.append((release.rank,release.version))
+                versions.append((release.rank, release.version))
         return versions
 
     def copy_key(self, src_key_path, dst_key_path):

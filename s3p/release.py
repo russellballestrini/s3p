@@ -60,7 +60,7 @@ class S3Release(object):
     @property
     def uploaded_timestamp(self):
         """Get timestamp when this release was uploaded"""
-        if self.key == None: return None
+        if self.key is None: return None
         return int(self.key.metadata['uploaded_timestamp'])
 
     @property
@@ -71,7 +71,7 @@ class S3Release(object):
     @property
     def version(self):
         """Get version metadata of this release"""
-        if self.key == None: return None
+        if self.key is None: return None
         return self.key.metadata['version']
 
     @property
@@ -86,15 +86,21 @@ class S3Release(object):
         return self.rank_index - 1
 
     @property
+    def prev_rank(self):
+        """Get previous rank name or None"""
+        if self.prev_rank_index is None: return None
+        return self.pipeline.ranks[self.prev_rank_index]
+
+    @property
     def prev_key_path(self):
         """Get previous key_path of this release or None"""
-        if self.prev_rank_index == None: return None
-        return _make_key_path([self.pipeline.ranks[self.prev_rank_index], self.filename])
+        if self.prev_rank is None: return None
+        return _make_key_path([self.prev_rank, self.filename])
 
     @property
     def prev_version(self):
         """Get version metadata of the previous rank's release"""
-        if self.prev_key == None: return None
+        if self.prev_key is None: return None
         return self.prev_key.metadata['version']
 
     def archive(self):
@@ -106,8 +112,8 @@ class S3Release(object):
         """Upload this release's filepath to the first rank and archive."""
         uploaded = precision_epoch()
         key = self.key
-        if key == None: key = Key(self.pipeline, self.key_path)
-        if new_version == None: new_version = uploaded
+        if key is None: key = Key(self.pipeline, self.key_path)
+        if new_version is None: new_version = uploaded
         key.set_metadata('version', new_version)
         key.set_metadata('uploaded_timestamp', uploaded)
         key.set_contents_from_filename(self.filepath)
@@ -122,11 +128,14 @@ class S3Release(object):
 
         If the release version matches new_version do nothing.
         """
-        if self.version != None:
+        if new_version and self.prev_version and new_version != self.prev_version:
+                return '{} version {} not in {} rank'.format(
+                    self.filename, new_version, self.prev_rank)
+        if self.version is not None:
             if self.version == new_version or self.version == self.prev_version:
                 return '{} version {} already in {} rank'.format(
                     self.filename, self.version, self.rank)
-        if self.prev_rank_index == None:
+        if self.prev_rank_index is None:
             # upload a new version of the file.
             self.upload(new_version)
         else:

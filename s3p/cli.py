@@ -21,6 +21,8 @@ def build_promote_subparser(parser):
 
 def build_version_subparser(parser):
     parser = build_base_subparser(parser, optional_rank=True)
+    parser.add_argument('--only-version', action='store_true', default=False,
+        help='only display version identifier to stdout')
     parser.set_defaults(func=version)
 
 def build_download_subparser(parser):
@@ -45,12 +47,8 @@ def build_parser():
 def promote(args):
     pipeline = S3Pipeline()
     release = pipeline.get_release(args.filepath, args.rank)
-    try:
-        result = release.promote(args.version)
-    except:
-        return 'error="could not promote, trying to skip rank?"'
-
-    if result == None:
+    result = release.promote(args.version)
+    if result is None:
         return 'success="promoted {} version {} to {} rank"'.format(
             release.filename, release.version, release.rank)
     else:
@@ -58,7 +56,7 @@ def promote(args):
 
 def version(args):
     pipeline = S3Pipeline()
-    if args.rank == None:
+    if args.rank is None:
         output = []
         versions = pipeline.file_versions(args.filepath)
         for version in versions:
@@ -66,12 +64,14 @@ def version(args):
         return '\n'.join(output)
     else:
         release = pipeline.get_release(args.filepath, args.rank)
+        if args.only_version is True:
+            return release.version
         return '{}="{}"'.format(release.rank,release.version)
 
 def download(args):
     pipeline = S3Pipeline()
     release = pipeline.get_release(args.filepath, args.rank)
-    if args.download_path == None:
+    if args.download_path is None:
         args.download_path = release.rank+'-'+release.filename
     release.download(args.download_path)
     return 'success="downloaded {} version {} from rank {} to {}"'.format(

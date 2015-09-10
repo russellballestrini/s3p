@@ -95,6 +95,9 @@ version
     filepath    filename or filepath
     rank        position in pipeline
 
+ optional arguments:
+  --only-version  only display version identifier to stdout
+
 promote
 -------
 

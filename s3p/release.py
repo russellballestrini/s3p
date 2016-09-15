@@ -72,7 +72,7 @@ class S3Release(object):
     def version(self):
         """Get version metadata of this release"""
         if self.key is None: return None
-        return self.key.metadata['version']
+        return self.key.metadata.get('version', None)
 
     @property
     def rank_index(self):
@@ -101,7 +101,7 @@ class S3Release(object):
     def prev_version(self):
         """Get version metadata of the previous rank's release"""
         if self.prev_key is None: return None
-        return self.prev_key.metadata['version']
+        return self.prev_key.metadata.get('version', None)
 
     def archive(self):
         """Archive this release to the archive area of the pipeline."""

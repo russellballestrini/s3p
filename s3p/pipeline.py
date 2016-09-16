@@ -47,7 +47,7 @@ class S3Pipeline(object):
         data = {}
         for release in self.get_releases(filepath):
             rank = release.rank
-            data[rank]['metadata'] = release.metadata
+            data[rank] = release.metadata
             data[rank]['name'] = release.name
             data[rank]['filename'] = release.filename
             data[rank]['size'] = release.size
